@@ -1,62 +1,7 @@
-var async = require('async'); 
 var express = require('express');
 var router = express.Router();
-var btoa = require('btoa');
-<<<<<<< HEAD
 var https = require('https'); 
-=======
->>>>>>> ebc34a5f2daaebf6d81b6757feb2090d6817250e
-
-
-
-const options = {
-    hostname: "api.gettyimages.com", 
-    port: 443, 
-    path: '/v3/search/images?fields=comp',
-    method: 'GET', 
-    headers: {
-        'Api-Key': process.env.GETTY_API_KEY || 'a2nx44jnc2tatmpvdk4b2zgg'
-    }
-}; 
-
-<<<<<<< HEAD
-function makeGettyApiRequest(sendBackResponseToBrowser) {
-=======
-function makeApiRequest(sendBackResponseToBrowser) {
->>>>>>> ebc34a5f2daaebf6d81b6757feb2090d6817250e
-    var apiResponse = ''; 
-    
-    https.get(options, function(response){
-        response.setEncoding('utf8');
-        response.on('data', function(chunk) {
-            console.log("received data: "); 
-            apiResponse += chunk; 
-        }); 
-        
-        response.on('end', function() {
-            console.log("status code: " + this.statusCode); 
-            //console.log("Complete response: " + apiResponse); 
-            /*execute callback*/
-            var responseJSON = JSON.parse(apiResponse); 
-            var images = responseJSON.images; 
-            // console.log(responseJSON); 
-            // console.log("num images: " + images.length); 
-            // console.log("url of first image: " + images[0].display_sizes[0].uri); 
-            var imageURI = images[3].display_sizes[0].uri; 
-            
-            sendBackResponseToBrowser(null, imageURI); 
-            
-        }); 
-    }).on("error", function(e) {
-        console.log("Got an error: " + e.message); 
-    }); 
-}
-
-
-
-
-
-
+var btoa = require('btoa');
 
 
 var keys = {
@@ -64,10 +9,10 @@ var keys = {
     secret: process.env.TWITTER_SECRET_KEY
 }
 
-
-
 var combined = keys.client + ":" + keys.secret; 
+
 var base64encoded = btoa(combined); 
+
 
 
 function getAccessToken(handleAccessTokenResponse) {
@@ -97,10 +42,17 @@ function getAccessToken(handleAccessTokenResponse) {
             // console.log("########################################"); 
             // console.log("status code: " + this.statusCode); 
             //console.log("Complete response: " + completeResponse); 
-            var responseJSON = JSON.parse(completeResponse); 
-            var accessToken = responseJSON.access_token; 
+            var error = null; 
+            var accessToken = null; 
             
-            handleAccessTokenResponse(accessToken); 
+            if (this.statusCode == "200") {
+                var responseJSON = JSON.parse(completeResponse); 
+                accessToken = responseJSON.access_token; 
+            } else {
+                error = completeResponse; 
+            }
+            
+            handleAccessTokenResponse(error, accessToken); 
             
             
             /*execute callback*/
@@ -142,10 +94,18 @@ function getTweets(accessToken, sendResponseToBrowser) {
             // console.log("########################################"); 
             // console.log("status code: " + this.statusCode); 
             //console.log("Complete response: " + completeResponse); 
+            var tweetsList = null; 
+            var error = null; 
             
-            var responseJSON = JSON.parse(completeResponse); 
-            var tweetsList = responseJSON.statuses; 
-            sendResponseToBrowser(tweetsList); 
+            if (this.statusCode == "200") {
+                var responseJSON = JSON.parse(completeResponse); 
+                var tweetsList = responseJSON.statuses;
+            } else {
+                error = completeResponse; 
+            }
+            
+            sendResponseToBrowser(error, tweetsList);
+            
       }); 
     });
     
@@ -156,35 +116,21 @@ function getTweets(accessToken, sendResponseToBrowser) {
 
 
 function doAllTwitterRequests(callback) {
-    getAccessToken(function(accessToken) {
-        getTweets(accessToken, function(tweets) {
-            callback(null, tweets); 
+    console.log("In doAllTwitterRequests......"); 
+    
+    console.log("combined keys: " + combined); 
+    getAccessToken(function(error, accessToken) {
+        
+        if (error) {
+            console.log("error: " + error); 
+            callback(error, null); 
+            return; 
+        }
+        
+        getTweets(accessToken, function(error, tweets) {
+            callback(error, tweets); 
         }); 
     }); 
 }
 
-
-
-router.get('/', function(req, res, next) {
-    async.parallel([
-        doAllTwitterRequests,
-        makeGettyApiRequest
-    ],
-    // optional callback
-    function(err, results) {
-        // results is an array
-        // first element is going to be 'tweets'
-        // second element is going to be 'imageURI'
-        
-        var tweets = results[0]; 
-        var imageURI = results[1]; 
-        
-        console.log("num tweets!!!!: " + tweets.length);
-        console.log("image URI!!!: " + imageURI); 
-        res.render('twitterAndGetty', {tweets: tweets, imageURI: imageURI});
-    });
-  
-});
-
-module.exports = router;
-
+module.exports.doAllTwitterRequests = doAllTwitterRequests;
