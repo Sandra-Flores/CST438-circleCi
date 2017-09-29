@@ -57,10 +57,17 @@ describe("Getty api call", function() {
             //console.log("tweets: " + tweets.length); 
             console.log("imageURI: " + imgURI); 
             
-            expect(imgURI).to.not.be.a('null'); 
+            expect(imgURI).to.not.be.a('null');
             done(); 
         });
-    }); 
+    });
+    
+    it("should return a URL", function(done) {
+            console.log("imageURI: " + imgURI); 
+            
+            expect(imgURI).to.not.be.a('null');
+            done(); 
+        });
     
     
     
